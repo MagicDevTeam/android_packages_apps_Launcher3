@@ -1,1 +1,7 @@
 db_files
+bin/
+gen/
+.project
+project.properties
+.classpath
+.settings/
