@@ -17,17 +17,22 @@
 package com.android.launcher3;
 
 import android.app.ActivityManager;
+//import android.app.ThemeHelper;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -82,22 +87,24 @@ public class IconCache {
     }
 
     public Drawable getFullResIcon(String packageName, int iconId) {
-        Resources resources;
-        try {
-            resources = mPackageManager.getResourcesForApplication(packageName);
+        android.content.pm.ApplicationInfo info = null;
+        try{
+            info = mPackageManager.getApplicationInfo(packageName, 0);
         } catch (PackageManager.NameNotFoundException e) {
-            resources = null;
+            info = null;
         }
-        if (resources != null) {
-            if (iconId != 0) {
-                return getFullResIcon(resources, iconId);
-            }
+        if (info != null) {
+            return getFullResIcon(info, packageName, iconId);
         }
         return getFullResDefaultActivityIcon();
     }
 
     public Drawable getFullResIcon(ResolveInfo info) {
         return getFullResIcon(info.activityInfo);
+    }
+
+    public Drawable getFullResIcon(ResolveInfo info, String className) {
+        return getFullResIcon(info.activityInfo, className);
     }
 
     public Drawable getFullResIcon(ActivityInfo info) {
@@ -112,7 +119,138 @@ public class IconCache {
         if (resources != null) {
             int iconId = info.getIconResource();
             if (iconId != 0) {
-                return getFullResIcon(resources, iconId);
+                Drawable dr = null;
+                Class<?> clazz = null;
+
+                try {
+                    clazz = Class.forName("android.app.ThemeHelper");
+                    dr = (Drawable) clazz.getMethod(
+                            "getDrawable",
+                            new Class[] {
+                                    PackageManager.class, String.class, int.class,
+                                    ApplicationInfo.class, String.class
+                            }).invoke(null, mPackageManager, info.packageName, iconId,
+                            info.applicationInfo, info.targetActivity);
+                } catch (ClassNotFoundException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IllegalArgumentException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (NoSuchMethodException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+
+                if (dr == null) {
+                    dr = getFullResIcon(resources, iconId);
+                }
+                return dr;
+            }
+        }
+        return getFullResDefaultActivityIcon();
+    }
+
+    public Drawable getFullResIcon(ActivityInfo info, String className) {
+
+        Resources resources;
+        try {
+            resources = mPackageManager.getResourcesForApplication(
+                    info.applicationInfo);
+        } catch (PackageManager.NameNotFoundException e) {
+            resources = null;
+        }
+        if (resources != null) {
+            int iconId = info.getIconResource();
+            if (iconId != 0) {
+
+                Drawable dr = null;           
+                Class<?> clazz = null;
+
+                try {
+                    clazz = Class.forName("android.app.ThemeHelper");
+                    dr = (Drawable) clazz.getMethod(
+                            "getDrawable",
+                            new Class[] {
+                                    PackageManager.class, String.class, int.class,
+                                    ApplicationInfo.class, String.class
+                            }).invoke(null, mPackageManager, info.packageName, iconId,
+                            info.applicationInfo, className);
+                } catch (ClassNotFoundException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IllegalArgumentException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (NoSuchMethodException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                
+                if (dr == null) {
+                    dr = getFullResIcon(resources, iconId);
+                }
+                return dr;
+            }
+        }
+        return getFullResDefaultActivityIcon();
+    }
+
+    public Drawable getFullResIcon(android.content.pm.ApplicationInfo info,
+            String packageName, int iconId) {
+
+        Resources resources;
+        try {
+            resources = mPackageManager.getResourcesForApplication(info);
+        } catch (PackageManager.NameNotFoundException e) {
+            resources = null;
+        }
+        if (resources != null) {
+            if (iconId != 0) {
+                Drawable dr = null;
+                Class<?> clazz = null;
+                try {
+                    clazz = Class.forName("android.app.ThemeHelper");
+                    dr = (Drawable) clazz.getMethod(
+                            "getDrawable",
+                            new Class[] {
+                                    PackageManager.class, String.class, int.class,
+                                    ApplicationInfo.class, String.class
+                            })
+                            .invoke(null, mPackageManager, packageName, iconId, info, packageName);
+                } catch (ClassNotFoundException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IllegalArgumentException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (NoSuchMethodException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                
+                
+                if (dr == null)
+                    dr = getFullResIcon(resources, iconId);
+                return dr;
             }
         }
         return getFullResDefaultActivityIcon();
@@ -228,7 +366,7 @@ public class IconCache {
             }
 
             entry.icon = Utilities.createIconBitmap(
-                    getFullResIcon(info), mContext);
+                    getFullResIcon(info, componentName.getClassName()), mContext);
         }
         return entry;
     }
